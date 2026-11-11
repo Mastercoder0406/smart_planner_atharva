@@ -1,0 +1,58 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Smart Planner | Admin Dashboard</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-slate-950 text-white min-h-screen">
+  <header class="px-6 py-4 border-b border-white/10">
+    <div class="max-w-7xl mx-auto flex items-center justify-between">
+      <div>
+        <h1 class="text-2xl font-bold">Admin Dashboard</h1>
+        <p class="text-sm text-slate-400">Analytics and project overview</p>
+      </div>
+      <div class="flex gap-3">
+        <a href="/map" class="px-4 py-2 rounded-xl border border-white/15">Back to Map</a>
+        <a href="/logout" class="px-4 py-2 rounded-xl bg-white text-slate-950 font-semibold">Logout</a>
+      </div>
+    </div>
+  </header>
+
+  <main class="max-w-7xl mx-auto px-6 py-8">
+    <div class="grid md:grid-cols-4 gap-4 mb-8">
+      <div class="p-5 rounded-3xl bg-white/5 border border-white/10">
+        <div class="text-slate-400 text-sm">Total Users</div>
+        <div class="text-3xl font-bold mt-2" id="kpi-users">--</div>
+      </div>
+      <div class="p-5 rounded-3xl bg-white/5 border border-white/10">
+        <div class="text-slate-400 text-sm">Total Routes</div>
+        <div class="text-3xl font-bold mt-2" id="kpi-routes">--</div>
+      </div>
+      <div class="p-5 rounded-3xl bg-white/5 border border-white/10">
+        <div class="text-slate-400 text-sm">Obstacles This Week</div>
+        <div class="text-3xl font-bold mt-2" id="kpi-obstacles">--</div>
+      </div>
+      <div class="p-5 rounded-3xl bg-white/5 border border-white/10">
+        <div class="text-slate-400 text-sm">Avg Route Time</div>
+        <div class="text-3xl font-bold mt-2" id="kpi-time">--</div>
+      </div>
+    </div>
+
+    <div class="grid lg:grid-cols-2 gap-6">
+      <div class="p-6 rounded-3xl bg-white/5 border border-white/10">
+        <h2 class="text-xl font-semibold mb-4">Recent Routes</h2>
+        <div id="recent-routes" class="space-y-3 text-sm text-slate-300">Loading...</div>
+      </div>
+
+      <div class="p-6 rounded-3xl bg-white/5 border border-white/10">
+        <h2 class="text-xl font-semibold mb-4">Route Activity</h2>
+        <div class="h-72 flex items-center justify-center text-slate-400">
+          Add your chart here using Chart.js or your existing dashboard script.
+        </div>
+      </div>
+    </div>
+  </main>
+</body>
+</html>

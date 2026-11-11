@@ -1,0 +1,96 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Smart Planner | Register</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-slate-950 text-white min-h-screen px-4 py-10">
+  <div class="max-w-6xl mx-auto grid lg:grid-cols-2 gap-10 items-start">
+    <div class="pt-10">
+      <span class="inline-block px-3 py-1 rounded-full bg-emerald-500/15 text-emerald-300 text-sm mb-5">
+        Create your personalized profile
+      </span>
+      <h1 class="text-4xl md:text-5xl font-extrabold leading-tight">
+        Register with the preferences your route engine needs
+      </h1>
+      <p class="mt-5 text-slate-300 max-w-xl text-lg">
+        Save mobility settings like slope tolerance, comfort weight, disliked surfaces, and default route style so each login loads your own route behavior.
+      </p>
+    </div>
+
+    <form action="/register" method="POST" class="bg-white/5 border border-white/10 rounded-3xl p-8 shadow-2xl">
+      <div class="grid md:grid-cols-2 gap-4">
+        <div>
+          <label class="block text-sm mb-2 text-slate-300">Full Name</label>
+          <input name="name" type="text" required
+                 class="w-full px-4 py-3 rounded-2xl bg-slate-900 border border-white/10 outline-none focus:border-emerald-400" />
+        </div>
+        <div>
+          <label class="block text-sm mb-2 text-slate-300">Email</label>
+          <input name="email" type="email" required
+                 class="w-full px-4 py-3 rounded-2xl bg-slate-900 border border-white/10 outline-none focus:border-emerald-400" />
+        </div>
+      </div>
+
+      <div class="mt-4">
+        <label class="block text-sm mb-2 text-slate-300">Password</label>
+        <input name="password" type="password" required
+               class="w-full px-4 py-3 rounded-2xl bg-slate-900 border border-white/10 outline-none focus:border-emerald-400" />
+      </div>
+
+      <div class="grid md:grid-cols-2 gap-4 mt-4">
+        <div>
+          <label class="block text-sm mb-2 text-slate-300">Max Slope (%)</label>
+          <input name="max_slope" type="number" min="0" max="20" step="0.5" value="6"
+                 class="w-full px-4 py-3 rounded-2xl bg-slate-900 border border-white/10 outline-none focus:border-emerald-400" />
+        </div>
+        <div>
+          <label class="block text-sm mb-2 text-slate-300">Comfort Weight (0 to 1)</label>
+          <input name="comfort_weight" type="number" min="0" max="1" step="0.1" value="0.5"
+                 class="w-full px-4 py-3 rounded-2xl bg-slate-900 border border-white/10 outline-none focus:border-emerald-400" />
+        </div>
+      </div>
+
+      <div class="mt-5">
+        <label class="block text-sm mb-2 text-slate-300">Default Route Type</label>
+        <select name="route_type"
+                class="w-full px-4 py-3 rounded-2xl bg-slate-900 border border-white/10 outline-none focus:border-emerald-400">
+          <option value="balanced">Balanced</option>
+          <option value="fastest">Fastest</option>
+          <option value="comfortable">Most Comfortable</option>
+          <option value="accessible">Most Accessible</option>
+        </select>
+      </div>
+
+      <div class="mt-5">
+        <label class="block text-sm mb-3 text-slate-300">Disliked Surfaces</label>
+        <div class="grid grid-cols-3 gap-3 text-sm">
+          <label class="flex items-center gap-2 bg-slate-900 border border-white/10 rounded-2xl p-3">
+            <input type="checkbox" name="disliked_surfaces" value="gravel" />
+            Gravel
+          </label>
+          <label class="flex items-center gap-2 bg-slate-900 border border-white/10 rounded-2xl p-3">
+            <input type="checkbox" name="disliked_surfaces" value="concrete" />
+            Concrete
+          </label>
+          <label class="flex items-center gap-2 bg-slate-900 border border-white/10 rounded-2xl p-3">
+            <input type="checkbox" name="disliked_surfaces" value="asphalt" />
+            Asphalt
+          </label>
+        </div>
+      </div>
+
+      <button type="submit"
+              class="w-full mt-6 py-3 rounded-2xl bg-emerald-400 text-slate-950 font-semibold">
+        Create Account
+      </button>
+
+      <p class="text-sm text-slate-400 mt-5 text-center">
+        Already have an account? <a href="/login" class="text-emerald-300 font-semibold">Login</a>
+      </p>
+    </form>
+  </div>
+</body>
+</html>

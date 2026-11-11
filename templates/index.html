@@ -1,0 +1,195 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Smart Planner | Route Navigator</title>
+  <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css" />
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;0,9..40,600;1,9..40,400&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+</head>
+<body>
+
+  <div class="app-shell">
+
+    <!-- SIDEBAR -->
+    <aside class="sidebar" id="sidebar">
+
+      <div class="brand">
+        <div class="brand-icon">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><circle cx="12" cy="12" r="3"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3M5.6 5.6l2.1 2.1M16.3 16.3l2.1 2.1M5.6 18.4l2.1-2.1M16.3 7.7l2.1-2.1"/></svg>
+        </div>
+        <div class="brand-text">
+          <h1>SmartPlanner</h1>
+          <p>Intelligent Route Navigator</p>
+        </div>
+      </div>
+
+      <div class="user-strip">
+        <div class="user-avatar">{{ current_user.name[0] | upper }}</div>
+        <div class="user-info">
+          <span class="user-name" id="user-name">{{ current_user.name }}</span>
+          <span class="user-role">{{ "Admin" if current_user.is_admin else "Traveller" }}</span>
+        </div>
+        <div class="user-actions">
+          {% if current_user.is_admin %}
+          <a href="/admin/dashboard" class="icon-btn" title="Admin Dashboard">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>
+          </a>
+          {% endif %}
+          <a href="/logout" class="icon-btn" title="Logout">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
+          </a>
+        </div>
+      </div>
+
+      <!-- Preferences -->
+      <div class="panel">
+        <div class="panel-header">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><circle cx="12" cy="12" r="3"/><path d="M19.07 4.93a10 10 0 0 1 0 14.14M4.93 4.93a10 10 0 0 0 0 14.14"/></svg>
+          <h2>Preferences</h2>
+        </div>
+
+        <div class="pref-row">
+          <div class="pref-label-row">
+            <span>Max Slope</span>
+            <span><span class="pref-value" id="slopeValue">4</span><span class="pref-unit">%</span></span>
+          </div>
+          <input id="slope" type="range" min="0" max="20" value="{{ current_user.max_slope or 4 }}" class="sp-range">
+          <div class="range-track-labels"><span>Flat</span><span>Steep</span></div>
+        </div>
+
+        <div class="pref-row">
+          <div class="pref-label-row">
+            <span>Comfort Weight</span>
+            <span class="pref-value" id="comfortValue">0.5</span>
+          </div>
+          <input id="comfort" type="range" min="0" max="1" step="0.1" value="{{ current_user.comfort_weight or 0.5 }}" class="sp-range">
+          <div class="range-track-labels"><span>Speed</span><span>Comfort</span></div>
+        </div>
+
+        <label class="toggle-row">
+          <input id="gravel" type="checkbox" {% if 'gravel' in current_user.disliked_surfaces %}checked{% endif %}>
+          <span class="toggle-switch"></span>
+          <span class="toggle-label">Avoid Gravel Surfaces</span>
+        </label>
+
+        <button id="save-profile" class="btn btn-ghost btn-full" style="margin-top:14px">
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg>
+          Save as Profile
+        </button>
+      </div>
+
+     
+
+      <!-- Route Controls -->
+      <div class="panel">
+        <div class="panel-header">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
+          <h2>Route Controls</h2>
+        </div>
+
+        <button id="calculate-routes" class="btn btn-primary btn-full">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><polygon points="5 3 19 12 5 21 5 3"/></svg>
+          Calculate Routes
+        </button>
+
+        <div class="route-toggle-group">
+          <button class="route-btn active" id="show-fastest" data-route="fastest">
+            <span class="route-dot" style="background:#ef4444"></span>Fastest
+          </button>
+          <button class="route-btn active" id="show-comfortable" data-route="comfortable">
+            <span class="route-dot" style="background:#22c55e"></span>Comfortable
+          </button>
+          <button class="route-btn active" id="show-accessible" data-route="accessible">
+            <span class="route-dot" style="background:#3b82f6"></span>Accessible
+          </button>
+          <button class="route-btn" id="show-all" data-route="all">
+            <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg>
+            Show All
+          </button>
+        </div>
+
+        <div class="view-controls">
+          <button id="zoom-all-btn" class="btn btn-ghost btn-sm">
+            <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M15 3h6v6M9 21H3v-6M21 3l-7 7M3 21l7-7"/></svg>Zoom All
+          </button>
+          <button id="focus-fastest-btn" class="btn btn-ghost btn-sm"><span class="mini-dot" style="background:#ef4444"></span>Fastest</button>
+          <button id="focus-comfortable-btn" class="btn btn-ghost btn-sm"><span class="mini-dot" style="background:#22c55e"></span>Comfort</button>
+          <button id="focus-accessible-btn" class="btn btn-ghost btn-sm"><span class="mini-dot" style="background:#3b82f6"></span>Access</button>
+        </div>
+      </div>
+
+      <!-- Route Details -->
+      <div class="panel" id="route-details-panel" style="display:none">
+        <div class="panel-header">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/></svg>
+          <h2>Route Details</h2>
+        </div>
+        <div id="route-comparison">
+          <div id="route-stats"></div>
+          <div id="segment-list"></div>
+        </div>
+      </div>
+
+    </aside>
+
+    <!-- MAP AREA -->
+    <main class="map-area" id="map-area">
+
+      <!-- Floating Search Overlay -->
+      <div class="search-overlay" id="search-overlay">
+
+        <button class="sidebar-toggle-btn" id="sidebar-toggle" title="Toggle Sidebar">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
+        </button>
+
+        <div class="search-stack">
+          <!-- Start -->
+          <div class="search-card" id="start-card">
+            <div class="search-pin start-pin">A</div>
+            <div class="search-input-wrap">
+              <label class="search-label">From</label>
+              <input type="text" id="start-search" class="search-input" placeholder="Search start location…" autocomplete="off">
+            </div>
+            <button class="search-clear-btn" id="clear-start" title="Clear">
+              <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+            </button>
+            <div id="start-suggestions" class="suggestions-dropdown"></div>
+          </div>
+
+          <div class="search-divider">
+            <button class="swap-btn" id="swap-btn" title="Swap">
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><polyline points="17 1 21 5 17 9"/><path d="M3 11V9a4 4 0 0 1 4-4h14"/><polyline points="7 23 3 19 7 15"/><path d="M21 13v2a4 4 0 0 1-4 4H3"/></svg>
+            </button>
+          </div>
+
+          <!-- End -->
+          <div class="search-card" id="end-card">
+            <div class="search-pin end-pin">B</div>
+            <div class="search-input-wrap">
+              <label class="search-label">To</label>
+              <input type="text" id="end-search" class="search-input" placeholder="Search destination…" autocomplete="off">
+            </div>
+            <button class="search-clear-btn" id="clear-end" title="Clear">
+              <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+            </button>
+            <div id="end-suggestions" class="suggestions-dropdown"></div>
+          </div>
+        </div>
+
+        <div class="map-click-hint" id="map-hint">
+          <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22s-8-4.5-8-11.8A8 8 0 0 1 12 2a8 8 0 0 1 8 8.2c0 7.3-8 11.8-8 11.8z"/><circle cx="12" cy="10" r="3"/></svg>
+          Or click map to place <strong id="hint-target">start</strong> point
+        </div>
+      </div>
+
+      <div id="map"></div>
+
+    </main>
+  </div>
+
+  <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
+  <script src="{{ url_for('static', filename='js/main.js') }}"></script>
+</body>
+</html>

@@ -1,0 +1,40 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Smart Planner | Login</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-slate-950 text-white min-h-screen flex items-center justify-center px-4">
+  <div class="w-full max-w-md">
+    <div class="text-center mb-8">
+      <h1 class="text-3xl font-bold">Welcome back</h1>
+      <p class="text-slate-400 mt-2">Login to access your saved route preferences</p>
+    </div>
+
+    <form action="/login" method="POST" class="bg-white/5 border border-white/10 rounded-3xl p-8 shadow-2xl backdrop-blur">
+      <div class="mb-5">
+        <label class="block text-sm mb-2 text-slate-300">Email</label>
+        <input name="email" type="email" required
+               class="w-full px-4 py-3 rounded-2xl bg-slate-900 border border-white/10 outline-none focus:border-emerald-400" />
+      </div>
+
+      <div class="mb-6">
+        <label class="block text-sm mb-2 text-slate-300">Password</label>
+        <input name="password" type="password" required
+               class="w-full px-4 py-3 rounded-2xl bg-slate-900 border border-white/10 outline-none focus:border-emerald-400" />
+      </div>
+
+      <button type="submit"
+              class="w-full py-3 rounded-2xl bg-emerald-400 text-slate-950 font-semibold">
+        Login
+      </button>
+
+      <p class="text-sm text-slate-400 mt-5 text-center">
+        New user? <a href="/register" class="text-emerald-300 font-semibold">Register here</a>
+      </p>
+    </form>
+  </div>
+</body>
+</html>
