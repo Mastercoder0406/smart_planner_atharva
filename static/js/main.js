@@ -3,7 +3,7 @@
    ════════════════════════════════════════════════════════════ */
 
 // ── Map init ──────────────────────────────────────────────────
-const map = L.map('map', { zoomControl: false }).setView([19.0330, 73.0297], 13);
+const map = L.map('map', { zoomControl: false }).setView([19.2575, 72.9810], 13);
 let markerLayer = L.layerGroup().addTo(map);
 let routeLayer = L.layerGroup().addTo(map);
 
@@ -381,7 +381,7 @@ async function calculateAllRoutes() {
             routeStats.push({
                 type: routeType, name: routeNames[routeType],
                 color: routeColors[routeType],
-                stats: data.stats, segments: data.segments || [], bounds: data.bounds
+                stats: data.stats, risk: data.risk, segments: data.segments || [], bounds: data.bounds
             });
         } catch (err) { console.error(`Route error (${routeType}):`, err); }
     }
@@ -416,6 +416,7 @@ function displayRouteComparison(routeStats) {
           <div>⏱ ${formatMinutes(s.estimated_time)}</div>
           <div>📈 Avg slope ${s.avg_slope.toFixed(1)}%</div>
           <div>⭐ Accessibility ${s.accessibility_score}/100</div>
+          ${route.risk ? `<div>🎲 Obstacle risk ${route.risk.level} (${Math.round(route.risk.avg_probability * 100)}%)</div>` : ''}
         </button>`;
     }).join('')}
     </div>`;

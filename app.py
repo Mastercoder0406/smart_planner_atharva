@@ -7,7 +7,7 @@ import random
 import sqlite3
 import time
 import joblib
-from datetime import datetime # <-- Make sure this is imported
+from datetime import datetime 
 import pandas as pd
 import requests 
 import json 
@@ -22,7 +22,7 @@ import os
 
 app = Flask(__name__)
 #login manager
-# WEATHER_API_KEY = "237f996616f07b24d9dd1c174b5d6c48"
+
 app.secret_key = os.getenv("SECRET_KEY", "change-this-secret")
 app.config["SECRET_KEY"] = "super-secret-key"
 app.secret_key = app.config["SECRET_KEY"]
@@ -54,7 +54,7 @@ def load_user(user_id):
 
 
 # --- Weather api---
-WEATHER_API_KEY = "237f996616f07b24d9dd1c174b5d6c48" # 
+WEATHER_API_KEY = os.getenv("WEATHER_API_KEY")# 
 # ----------------------------------------------
 
 # --- Load the pre-trained ML model (Phase 4) ---
@@ -64,6 +64,11 @@ try:
 except FileNotFoundError:
     print("Warning: obstacle_predictor.pkl not found. Predictive routing will be disabled.")
     predictor_model = None
+
+# --- Edge-aware ML risk + route cost functions ---
+from ml_risk import RISK
+from routing_costs import make_cost_function, HEURISTIC_SCALE
+print(f"Risk model source: {RISK.source}")
 
 # --- Database Setup (Phase 3) ---
 def init_db():
@@ -160,10 +165,21 @@ def migrate_db():
 migrate_db()
 
 # --- Load map data and add simulated accessibility data ---
-place_name = "Navi Mumbai, Maharashtra, India"
-print(f"Loading map data for {place_name}...")
-G = ox.graph_from_place(place_name, network_type='walk')
-print("Map data loaded successfully.")
+# Hiranandani Estate, Thane
+center_point = (19.2575, 72.9810)  # latitude, longitude
+
+print("Loading map data around Hiranandani Estate...")
+
+G = ox.graph_from_point(
+    center_point,
+    dist=1200,
+    dist_type="bbox",
+    network_type="walk",
+    simplify=True,
+    retain_all=False
+)
+
+print("Map data loaded successfully!")
 
 print("Adding accessibility data to the graph...")
 # For development, use simulated data to avoid API rate limits
@@ -201,7 +217,7 @@ def get_recent_obstacles():
 
 # WEATHER_API_KEY = os.getenv("OPENWEATHER_API_KEY", "")
 
-def get_current_weather(api_key, city_name="Navi Mumbai"):
+def get_current_weather(api_key, city_name="Thane West"):
     if not api_key:
         return "Unknown"
 
@@ -217,23 +233,23 @@ def get_current_weather(api_key, city_name="Navi Mumbai"):
     except Exception:
         return "Unknown"
 
-    base_url = "http://api.openweathermap.org/data/2.5/weather?"
-    complete_url = f"{base_url}q={city_name}&appid={api_key}"
+    # base_url = "http://api.openweathermap.org/data/2.5/weather?"
+    # complete_url = f"{base_url}q={city_name}&appid={api_key}"
 
-    try:
-        response = requests.get(complete_url)
-        data = response.json()
-        if data.get("cod") != 200:
-            print(f"Weather API Error: {data.get('message', 'Unknown Error')}")
-            return "Unknown"
+    # try:
+    #     response = requests.get(complete_url)
+    #     data = response.json()
+    #     if data.get("cod") != 200:
+    #         print(f"Weather API Error: {data.get('message', 'Unknown Error')}")
+    #         return "Unknown"
 
-        # We only care about the main condition (e.g., "Rain", "Clouds", "Clear")
-        weather_condition = data["weather"][0]["main"]
-        print(f"Current weather in {city_name}: {weather_condition}")
-        return weather_condition
-    except Exception as e:
-        print(f"Could not connect to weather API: {e}")
-        return "Unknown"
+    #     # We only care about the main condition (e.g., "Rain", "Clouds", "Clear")
+    #     weather_condition = data["weather"][0]["main"]
+    #     print(f"Current weather in {city_name}: {weather_condition}")
+    #     return weather_condition
+    # except Exception as e:
+    #     print(f"Could not connect to weather API: {e}")
+    #     return "Unknown"
 
 # --- NEW: DEM API FUNCTION (Phase 1) ---
 def get_elevation(lat, lng):
@@ -979,109 +995,23 @@ def get_route():
         except Exception as e:
             return jsonify({"error": f"Could not find nearest nodes: {str(e)}"}), 400
 
+        # A* heuristic: straight-line distance. Scaled by n_min (0.8) only in 'balanced',
+        # the one mode where a penalty can be below 1.0 (footway benefit).
+        h_scale = HEURISTIC_SCALE.get(route_type, 1.0)
+
         def heuristic(u, v):
             try:
-                return ox.distance.great_circle(G.nodes[u]['y'], G.nodes[u]['x'], G.nodes[v]['y'], G.nodes[v]['x'])
+                return h_scale * ox.distance.great_circle(G.nodes[u]['y'], G.nodes[u]['x'], G.nodes[v]['y'], G.nodes[v]['x'])
             except KeyError:
                 return 0  # Fallback heuristic
 
         try:
-            # Choose cost function based on route type
-            if route_type == "fastest":
-                def fastest_cost(u, v, d):
-                    edge_data = get_best_edge_data(G, u, v)
-                    if not edge_data:
-                        return float("inf")
-
-                    if edge_data.get("is_train_line", False):
-                        return float("inf")
-
-                    cost = edge_data.get("length", 0)
-                    if edge_data.get("surface", "asphalt") == "gravel":
-                        cost *= 1.15
-                    return cost
-
-                cost_func = fastest_cost
-
-            elif route_type == "comfortable":
-                def comfortable_cost(u, v, d):
-                    edge_data = get_best_edge_data(G, u, v)
-                    if not edge_data:
-                        return float("inf")
-
-                    if edge_data.get("is_train_line", False):
-                        return float("inf")
-
-                    cost = edge_data.get("length", 0)
-
-                    slope = edge_data.get("slope", 0)
-                    if slope > 8:
-                        cost *= 3.0
-                    elif slope > 5:
-                        cost *= 2.0
-                    elif slope > 3:
-                        cost *= 1.35
-
-                    surface = edge_data.get("surface", "asphalt")
-                    if surface == "gravel":
-                        cost *= 2.0
-                    elif surface == "concrete":
-                        cost *= 1.15
-
-                    if current_weather == "Rain" and surface == "gravel":
-                        cost *= 2.5
-
-                    node_u_data = G.nodes[u]
-                    for obs_lat, obs_lng in recent_obstacles:
-                        dist_to_obstacle = ox.distance.great_circle(node_u_data["y"], node_u_data["x"], obs_lat, obs_lng)
-                        if dist_to_obstacle < 40:
-                            cost *= 2.5
-
-                    return cost
-
-                cost_func = comfortable_cost
-
-            elif route_type == "accessible":
-                def accessible_cost(u, v, d):
-                    edge_data = get_best_edge_data(G, u, v)
-                    if not edge_data:
-                        return float("inf")
-
-                    if edge_data.get("is_train_line", False):
-                        return float("inf")
-
-                    cost = edge_data.get("length", 0)
-
-                    node_u_data = G.nodes[u]
-                    for obs_lat, obs_lng in recent_obstacles:
-                        dist_to_obstacle = ox.distance.great_circle(node_u_data["y"], node_u_data["x"], obs_lat, obs_lng)
-                        if dist_to_obstacle < 40:
-                            return float("inf")
-
-                    slope = edge_data.get("slope", 0)
-                    if slope > 10:
-                        cost *= 6.0
-                    elif slope > 5:
-                        cost *= 3.5
-                    elif slope > 3:
-                        cost *= 1.8
-
-                    surface = edge_data.get("surface", "asphalt")
-                    if surface == "gravel":
-                        cost *= 3.5
-                    elif surface == "concrete":
-                        cost *= 1.3
-
-                    if current_weather == "Rain":
-                        cost *= 1.4
-
-                    return cost
-
-                cost_func = accessible_cost
-            else:  # balanced (default) - but since we removed balanced from frontend, this shouldn't be called
-                def balanced_cost(u, v, d):
-                    return calculate_custom_cost(G, u, v, user_profile, recent_obstacles, current_weather)
-                cost_func = balanced_cost
+            # Edge-cost function for this route type (ML risk applied inside)
+            cost_func = make_cost_function(
+                route_type, G, get_best_edge_data,
+                {"weather": current_weather, "obstacles": recent_obstacles, "profile": user_profile},
+                RISK,
+            )
 
             # Calculate route with improved efficiency for long distances
             try:
@@ -1138,8 +1068,10 @@ def get_route():
 
             segments = build_route_segments(G, route)
             route_bounds = get_route_bounds(route_coords)
+            risk_info = RISK.route_risk(G, route, get_best_edge_data, recent_obstacles)
 
             return jsonify({
+                "risk": risk_info,
                 "route": route_coords,
                 "stats": route_stats,
                 "route_type": route_type,
@@ -1156,6 +1088,12 @@ def get_route():
     except Exception as e:
         return jsonify({"error": f"Request processing failed: {str(e)}"}), 500
     
+
+@app.route('/api/risk')
+def api_risk():
+    """Current ML obstacle-risk snapshot (UI badge + demo)."""
+    return jsonify(RISK.summary())
+
 
 #Helper function for routes
 def build_route_segments(G, route):
